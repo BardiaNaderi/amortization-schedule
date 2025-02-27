@@ -16,23 +16,6 @@ A full-stack application for calculating loan amortization schedules. The applic
 - npm or yarn
 - FRED API key (get one from https://fred.stlouisfed.org/docs/api/api_key.html)
 
-## Project Structure
-
-my-app-frontend/
-├── public/
-├── src/
-│ ├── components/
-│ ├── services/
-│ └── types/
-
-my-app-backend/
-├── src/
-│ ├── controllers/
-│ ├── services/
-│ ├── types/
-│ └── routes/
-└── tsconfig.json
-
 ## Installation
 
 1. Clone the repository
