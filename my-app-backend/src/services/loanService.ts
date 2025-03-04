@@ -90,6 +90,7 @@ export class LoanService {
     
     const schedule: AmortizationEntry[] = [];
     let balance = inputs.principalAmount;
+    
     let currentDate = new Date(inputs.startDate);
     currentDate.setUTCHours(0, 0, 0, 0);
 
@@ -103,25 +104,16 @@ export class LoanService {
       totalPayment: 0
     });
 
-    for (let month = 1; month <= inputs.amortizationMonths; month++) {
+    for (let month = 1; month <= inputs.termMonths; month++) {
       const startingBalance = balance;
+      
       const endDate = this.getEndOfMonth(currentDate);
       const daysInPeriod = this.getDaysInPeriod(currentDate, endDate);
       
       let principalPayment = params.monthlyPrincipalPayment;
-      let interestPayment = 0;
-
-      if (month <= inputs.termMonths) {
-        interestPayment = startingBalance * params.dailyInterestRate * daysInPeriod;
-        
-        if (month === inputs.termMonths) {
-          principalPayment = balance;
-        }
-      } else {
-        principalPayment = 0;
-        balance = 0;
-      }
-
+      
+      const interestPayment = startingBalance * params.dailyInterestRate * daysInPeriod;
+      
       balance -= principalPayment;
 
       schedule.push({
@@ -140,6 +132,56 @@ export class LoanService {
         1
       ));
       currentDate.setUTCHours(0, 0, 0, 0);
+    }
+
+    if (balance > 0) {
+      const startingBalance = balance;
+      
+      const balloonDate = new Date(inputs.startDate);
+      balloonDate.setUTCFullYear(
+        balloonDate.getUTCFullYear() + Math.floor(inputs.termMonths / 12),
+        balloonDate.getUTCMonth() + (inputs.termMonths % 12),
+        balloonDate.getUTCDate()
+      );
+      balloonDate.setUTCHours(0, 0, 0, 0);
+      
+      const lastPaymentDate = schedule[schedule.length - 1].date;
+      const daysInPeriod = this.getDaysInPeriod(lastPaymentDate, balloonDate);
+      
+      const interestPayment = startingBalance * params.dailyInterestRate * daysInPeriod;
+      
+      const principalPayment = balance;
+      
+      balance = 0;
+
+      schedule.push({
+        date: new Date(balloonDate),
+        startingBalance,
+        interestPayment,
+        principalPayment,
+        endingBalance: balance,
+        daysInPeriod,
+        totalPayment: principalPayment + interestPayment
+      });
+    }
+
+    const totalEntries = inputs.amortizationMonths + 1;
+    if (schedule.length < totalEntries) {
+      const lastDate = new Date(schedule[schedule.length - 1].date);
+      
+      for (let i = schedule.length; i < totalEntries; i++) {
+        lastDate.setUTCMonth(lastDate.getUTCMonth() + 1);
+        
+        schedule.push({
+          date: new Date(lastDate),
+          startingBalance: 0,
+          interestPayment: 0,
+          principalPayment: 0,
+          endingBalance: 0,
+          daysInPeriod: 0,
+          totalPayment: 0
+        });
+      }
     }
 
     return {
